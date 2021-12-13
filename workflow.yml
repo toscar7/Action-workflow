@@ -1,0 +1,97 @@
+name: tec-gcpi-shared_services-dev
+
+# Controls when the workflow will run
+on:
+  push:
+    branches-ignore:
+      - feature/**
+    path:
+      - 'dev/**'
+      - 'modules/psa/**'
+  pull_request:
+    branches:
+      - master
+
+
+jobs:
+  terraform:
+    name: 'Terraform'
+    runs-on: ubuntu-latest
+ #step-1   
+    #Checkout check outs the current configuration#
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+ #step-2       
+    #This step retrieves the Terraform CLI used in the GitHub action workflow.
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1
+      with:
+        #TF_API_TOKEN secret as an environment variable, enabling the Terraform CLI to authenticate to Terraform Cloud.
+        cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+ #step-3      
+     #This step initializes the configuration used in the GitHub action workflow.
+    - name: Terraform Init
+      id: init
+      run: terraform init
+      working-directory: dev
+# #step-4
+#   #checks whether the configuration has been properly formatted.
+#   - name: Terraform Format
+#     id: fmt
+#     run: terraform fmt -check
+ #step-5   
+    #This step validates the configuration used in the GitHub action workflow.
+    - name: Terraform Validate
+      id: validate
+      run: terraform validate -no-color
+      working-directory: dev
+ #step-6   
+    #This will generates a Terraform plan.
+    - name: Terraform Plan
+      id: plan
+      #This step only runs on pull requests. The PR generates a plan. When the PR is merged, that plan will be applied.
+      if: github.event_name == 'pull_request'
+      run: terraform plan -no-color
+      working-directory: dev
+      #This step will continue even when it errors. This allows the next step to display the plan error message even if this step fails.
+      continue-on-error: true
+      
+ #step-7   
+    #adds a comment to the pull request with the results of the format, init and plan steps. In addition, it displays the plan output (steps.plan.outputs.stdout).
+    - name: Update Pull Request
+      uses: actions/github-script@0.9.0
+      if: github.event_name == 'pull_request'
+      env:
+        PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+          #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+          #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+          #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
+          <details><summary>Show Plan</summary>
+          \`\`\`\n
+          ${process.env.PLAN}
+          \`\`\`
+          </details>
+          *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+          github.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: output
+          })
+ #step-8  
+    #Terraform Plan Status returns whether a plan was successfully generated or not. This step highlights whenever a plan fails because the "Terraform Plan" step continues on error.    
+    - name: Terraform Plan Status
+      if: steps.plan.outcome == 'failure'
+      working-directory: dev
+      run: exit 1
+ #step-9  
+    #Terraform Apply applies the configuration. This step will only run when a commit is pushed to main.
+    - name: Terraform Apply
+      if: github.ref == 'refs/heads/master'  && github.event_name == 'push'
+      run: terraform apply -auto-approve
+      working-directory: dev
