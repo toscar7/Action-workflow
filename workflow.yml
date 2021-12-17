@@ -1,16 +1,13 @@
-name: tec-gcpi-shared_services-dev
+name: terraform-deployment-workflow
 
 # Controls when the workflow will run
 on:
   push:
     branches-ignore:
       - feature/**
-    path:
-      - 'dev/**'
-      - 'modules/psa/**'
   pull_request:
     branches:
-      - master
+      - main
 
 
 jobs:
@@ -34,7 +31,7 @@ jobs:
     - name: Terraform Init
       id: init
       run: terraform init
-      working-directory: dev
+      #working-directory: 
 # #step-4
 #   #checks whether the configuration has been properly formatted.
 #   - name: Terraform Format
@@ -45,7 +42,7 @@ jobs:
     - name: Terraform Validate
       id: validate
       run: terraform validate -no-color
-      working-directory: dev
+      #working-directory: 
  #step-6   
     #This will generates a Terraform plan.
     - name: Terraform Plan
@@ -53,7 +50,7 @@ jobs:
       #This step only runs on pull requests. The PR generates a plan. When the PR is merged, that plan will be applied.
       if: github.event_name == 'pull_request'
       run: terraform plan -no-color
-      working-directory: dev
+      #working-directory: 
       #This step will continue even when it errors. This allows the next step to display the plan error message even if this step fails.
       continue-on-error: true
       
@@ -87,11 +84,11 @@ jobs:
     #Terraform Plan Status returns whether a plan was successfully generated or not. This step highlights whenever a plan fails because the "Terraform Plan" step continues on error.    
     - name: Terraform Plan Status
       if: steps.plan.outcome == 'failure'
-      working-directory: dev
+      #working-directory: 
       run: exit 1
  #step-9  
     #Terraform Apply applies the configuration. This step will only run when a commit is pushed to main.
     - name: Terraform Apply
       if: github.ref == 'refs/heads/master'  && github.event_name == 'push'
       run: terraform apply -auto-approve
-      working-directory: dev
+      #working-directory: 
