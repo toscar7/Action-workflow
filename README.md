@@ -1,6 +1,6 @@
 # Action-workflow
 
-</h1>This workflow will deploy terraform code in the cloud </br>
+</h1>This workflow will deploy terraform code in the cloud using terraform cloud</br>
 
 </h1>https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions</br>
 </h1>https://www.runatlantis.io/guide/#getting-started</br>
